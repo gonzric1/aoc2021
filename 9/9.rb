@@ -1,25 +1,29 @@
 require 'pry'
-$data = File.read("input.txt").split("\n")
-$data.map! { |d| d.chars}
+$data = []
+def get_data
+  $data = File.read("input.txt").split("\n")
+  $data.map! { |d| d.chars}
+  $data = $data.map.with_index { |d, y|
+    d.map.with_index do |_, x|
+      args = {x: x, y: y, height: $data[y][x]}
+      Location.new(args)
+    end
+  }
+end
 
 def find_low_points
   low_points = [] # "x, y" 0,0 is top left.
 
-  $data.each_index do |y|
-    $data[y].each_index do |x|
-      if $data[y][x] == '0'
-        low_points << [x,y]
-      elsif lower_than_above?(x, y) &&
-        lower_than_below?(x, y) &&
-        lower_than_left?(x, y) &&
-        lower_than_right?(x, y)
-        low_points << [x, y]
+  $data.each do |y|
+    y.each do |x|
+      if x.low_point?
+        low_points << x
       end
     end
-
   end
   low_points
 end
+
 
 def add_low_point_values (low_points)
   total = 0
@@ -31,54 +35,22 @@ def add_low_point_values (low_points)
   puts "total #{total}"
 end
 
-def lower_than_above? (x, y)
-  if y.zero?
-    true
-  else
-    $data[y][x] < $data[y - 1][x]
+
+
+def find_basin(point)
+  basin = []
+  if point.height < 9 && !point.mapped?
+    basin << point
+    point.mapped = true
+
+    basin += find_basin(point.left) if point.left
+    basin += find_basin(point.right) if point.right
+    basin += find_basin(point.up) if point.up
+    basin += find_basin(point.down) if point.down
   end
+  basin
 end
 
-def lower_than_below? (x, y)
-  if y == ($data.length - 1 )
-    true
-  else
-    $data[y][x] < $data[y + 1][x]
-  end
-end
-
-def lower_than_left? (x, y)
-  if x.zero?
-    true
-  else
-    $data[y][x] < $data[y][x-1]
-  end
-end
-
-def lower_than_right? (x, y)
-  if x == $data[0].length-1
-    true
-  else
-    $data[y][x] < $data[y][x+1]
-  end
-end
-# x, y
-low_points = find_low_points
-
-#Part Two - Use Lower than _ functions, keep going until 9
-# Recursive, return [x,y] location of members of basin, add all of those to array, add array to basins array
-# how to stop it from bouncing back and forth forever? Unmapped variable? This would be easier OO!
-# Set mapped to true, add to array.
-basins = []
-#low_points.each do |point|
-#  basins << find_basin(point)
-#end
-#
-#def find_basin(point)
-#  basin = []
-#  #go left, add left point if left < left + left_of_left
-#  return basin + find_basin(point)
-#end
 
 class Location
   attr_reader :x, :y, :height
@@ -86,8 +58,61 @@ class Location
   def initialize args
     @x = args[:x]
     @y = args[:y]
-    @height = args[:height]
+    @height = args[:height].to_i
     @mapped = false
   end
+  def mapped?
+    @mapped
+  end
+  def up
+    if @y.zero?
+      false
+    else
+      $data[@y - 1][@x]
+    end
+  end
+  def down
+    if @y == 99
+      false
+    else
+      $data[@y + 1][@x]
+    end
+  end
+  def left
+    if @x.zero?
+      false
+    else
+      $data[@y][@x - 1]
+    end
+  end
+  def right
+    if @x == 99
+      false
+    else
+      $data[@y][@x+1]
+    end
+  end
+  def low_point?
+    if @height == 0 ||
+       (right && @height < right.height &&
+       left && @height < left.height &&
+       up && @height < up.height &&
+       down && @height < down.height)
+       true
+    else
+      false
+    end
+  end
 end
-binding.pry
+
+get_data
+low_points = find_low_points
+basins = Array.new
+low_points.each do |point|
+  basins << find_basin(point)
+end
+basins.sort_by!(&:length)
+sum = basins.last(3)
+p sum[0].length * sum[1].length * sum[2].length
+
+#binding.pry
