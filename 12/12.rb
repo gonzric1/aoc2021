@@ -1,8 +1,6 @@
-require 'pry'
-
 $locations = Hash.new
 $data = Array.new
-def get_data 
+def get_data
   $data = File.read("input.txt").split("\n")
   $data.map! { |d| d.split("-")}
   $locations = $data.flatten.uniq.map! {|p| [p, []] }.to_h
@@ -11,34 +9,37 @@ def get_data
       $locations[d[1]] << d[0]
   end
 end
-#If thre's a path forward, take it
-# if there's no path foward, and not end - error
-# if end, return end + point. 
+
 
 class String
   def capitalized?
     self == self.upcase
   end
 end
+
 def map_locations point = "start", explored = []
   paths = []
-  pp "current location: #{point}"
+  explored << point unless point.capitalized?
+
   if point == "end"
-    ary = ["end"]
-    return ary
+    arry = [["end"]]
+    return arry
   else
-    explored << point unless point.capitalized?
-    paths = []
-    ($locations[point]-explored).each do |link|
-      path =  map_locations(link, explored)
-      pp path
-     
+    unexplored = $locations[point] - explored
+    return [[nil]] if unexplored.empty?
+    unexplored.each do |node|
+      map = map_locations(node, Array.new(explored))
+      map.each do |path|
+        path.unshift(point)
+        paths << path
+      end
+
     end
+    paths.delete_if {|element| element.include? nil}
+    return paths
   end
-  return paths
 end
 
-end
 get_data
-map_locations
-binding.pry
+paths = map_locations
+puts "Total Paths: #{paths.count}"
